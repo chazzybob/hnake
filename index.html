@@ -1,0 +1,554 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Snake to the Death</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 100%;
+        height: 100%;
+        font: 13px Helvetica, Arial;
+       }
+      form { background: #000; padding: 3px; position: fixed; top: 20%; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+
+      .login {
+        /*display: none;*/
+        background-color: white;
+      }
+      .setup {
+        display: none;
+        text-align: center;
+      }
+      .game {
+        width: 100%;
+        display: none;
+        padding: 20px;
+        position: absolute;
+        top: 5%;
+        text-align: center;
+        /*border: solid pink 1px;*/
+      }
+      #gmenu {
+
+      }
+      #arena {
+        border-collapse: collapse;
+        position: relative;
+        margin: 0 auto;
+      }
+      #arena td {
+        --size: .5em;
+        height: var(--size);
+        width: var(--size);
+        border: none;
+        /*border: solid green 1px;*/
+      }
+
+      .booton {
+        width: 60px;
+        height: 20px;
+        background-color: rgba(0,200,100,.1);
+        border-radius: 10px;
+        border: solid grey 2px;
+        text-align: center;
+        position: relative;
+        margin: 0 auto;
+        top: auto;
+        left: auto;
+      }
+      .pad {
+        width: 40%;
+        height: 40%;
+        background-color: green;
+        border-radius: 100%;
+        border: solid grey 2px;
+        position: absolute;
+        color: white;
+        text-align: center;
+      }
+      #up {
+        left: 30%;
+      }
+      #down {
+        bottom: 0%;
+        left: 30%;
+      }
+      #left {
+        top: 30%;
+      }
+      #right {
+        top: 30%;
+        right: 0%;
+      }
+      #numpad {
+        --box: 30em;
+        width: var(--box);
+        height: var(--box);
+        /*border: solid black 1px;*/
+        float:  bottom;
+        position: relative;
+        margin: auto;
+        margin-top: 2em;
+      }
+      .speed {
+        text-align: center;
+        width: 30%;
+        padding: 3%;
+      }
+      .speedb {
+        padding-top: 2%;
+        padding-bottom: 5%;
+        display: flex;
+        width: 100%;
+      }
+      .speedb > div {
+        flex: auto;
+        margin: 2%;
+      }
+      #playas {
+        width: 100%;
+        left: 0;
+        text-align: left;
+        display: flex;
+      }
+      #playas th,td {
+        border-left: solid transparent 10px;
+        border-spacing: 5px;
+      }
+      .holdcols {
+        /*width: 100%;*/
+        height: 50%;
+        border: none;
+        display: block;
+        bottom: 20%;
+        position: relative;
+        margin: 0 auto;
+
+      }
+      .colcontain {
+        border: solid black 1px;
+        margin: 0 auto;
+      }
+      .colorpick {
+        --box: 3em;
+        width: var(--box);
+        height: var(--box);
+        border: none;
+        text-align: center;
+        vertical-align: middle;
+        margin: 0 auto;
+        opacity: .65;
+      }
+    </style>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"> -->
+  </head>
+  <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+    var size = 60;
+    var speed = 50;
+    var startlen = 5;
+    var phone = 0;
+    var colah = 'black';
+    var lvl = 0;
+    // function loadGame() {
+    //   var row;
+    //   var cell;
+    //   var boot;
+    //   var tabe = document.createElement("TABLE");
+    //   tabe.setAttribute("id","arena");
+    //   document.getElementById("juego").appendChild(tabe);
+    //   for (i = 0; i <= (size + 1); i++) {
+    //     row = document.createElement("TR");
+    //     row.setAttribute("id", "r"+i);
+    //     tabe.appendChild(row);
+    //     for (j = 0; j <= (size + 1); j++) {
+    //       cell = document.createElement("TD");
+    //       cell.setAttribute("id", "y" + i + "x" + j);
+    //       if(i == 0 || i == (size + 1) || j == 0 || j == (size + 1)){
+    //         cell.style.backgroundColor = "black";
+    //       }
+    //       else {
+    //         cell.style.backgroundColor = 'white';
+    //       }
+    //       document.getElementById("r"+i).appendChild(cell);
+    //     }
+    //   }
+    //   // boot = document.createElement("DIV");
+    //   // boot.setAttribute("id","gob");
+    //   // boot.setAttribute("class", "booton");
+    //   // boot.innerHTML = "GO!";
+    //   // document.getElementById("juego").appendChild(boot);
+    // }
+      $(function () {
+          var user;
+          var num;
+          var directs = ['LEFT','UP','RIGHT','DOWN'];
+          var doff = 37;
+          var socket = io();
+          var $login = $('.login');
+          var $game = $('.game');
+          var $setup = $('.setup');
+          var cols = ['rgb(255, 0, 0)','rgb(255, 165, 0)','rgb(255, 215, 0)','rgb(0, 128, 0)','rgb(0, 0, 255)','rgb(128, 0, 128)','rgb(255, 192, 203)','rgb(255, 140, 0)','rgb(218, 165, 32)','rgb(154, 205, 50)','rgb(0, 255, 255)','rgb(218, 112, 214)'];
+          var names = ['red','orange','gold','green','blue','purple','pink','darkorange','goldenrod','yellowgreen','aqua','orchid'];
+          var gcols = ['white', 'black', 'grey'];
+          var dudes;
+          var hx;
+          var hy;
+          var clicked = "rgba(0,200,100,1)";
+          var notclicked = "rgba(0,200,100,.1)";
+          $(document).ready(function() {
+            var $table = $login.append('<table class="holdcols"></table>');
+            for (r = 0; r < 2; r++) {
+              // var $row = $table.append('<tr class="colcontain"</tr>');
+              for (c = 0; c < (cols.length/2); c++) {
+                // var $cell = $row.append('<td class="colorpick" id="' + cols[(cols.length/2)+c] + '"></td>');
+                // $cell.css('backgroundColor',cols[(cols.length/2)+c]);
+                var $bx = $('#' + names[(r * (cols.length/2))+c]);
+                $bx.click(function() {
+                  var op = $(this).css('opacity');
+                  if (op > .2) {
+                    socket.emit('picked color', $(this).css("background-color"));
+                    // if ($('.colorpick').css('opacity') > .2) {
+                    //   $('.colorpick').css('opacity',.65);
+                    // }
+                    $('.colorpick').css('opacity',.1);
+                    $('.colorpick').css('border','none');
+                    $(this).css("opacity", 1);
+                    $(this).css("border", 'solid black 2px');
+                    colah = $(this).css("background-color")
+                    $('#you').css('color',colah);
+                    $('#m').focus();
+                  }
+                });
+              }
+            }
+          });
+          $('form').submit(function(){
+            socket.emit('set user', {num: num, user: $('#m').val()});
+            user = $('#m').val();
+            $('#m').val('');
+            $login.fadeOut();
+            $game.append('<h2 id="wait">Please wait while the game is loading</h2>');
+            if (phone == 1) {
+              $('#holdem').append('<div id="numpad"><div id="up" class="pad">UP</div><div id="down" class="pad">DN</div><div id="left" class="pad">LF</div><div id="right" class="pad">RT</div></div>');
+                // $('#holdem').append('<div id="numpad"><div id="up" class="pad"></div><div id="down" class="pad"></div><div id="left" class="pad"></div><div id="right" class="pad"></div></div>');
+              $('#up').click(function() {
+                socket.emit('direction', {num: num, direction: 'UP'});
+              });
+              $('#down').click(function() {
+                socket.emit('direction', {num: num, direction: 'DOWN'});
+              });
+              $('#left').click(function() {
+                socket.emit('direction', {num: num, direction: 'LEFT'});
+              });
+              $('#right').click(function() {
+                socket.emit('direction', {num: num, direction: 'RIGHT'});
+              });
+              // $('#holdem').append('<h1>You are using a friggin phone!!!</h1>');
+            }
+            return false;
+          });
+          $(document).ready(function() {
+
+            $('#phone').click(function() {
+              if (phone == 0) {
+                phone = 1;
+                $(this).css("background-color", clicked);
+              }
+              else {
+                phone = 0;
+                $(this).css("background-color", notclicked);
+              }
+            });
+            $('#nextb').hover(function() {
+              $(this).css("background-color", clicked);
+                }, function(){
+                $(this).css("background-color", notclicked);
+            });
+            $('#nextb').click(function() {
+              socket.emit('params', {size: size, speed: speed, startlen: startlen});
+              // $(this).remove();
+              $game.empty();
+              if (num == 0) {
+                $game.append('<div class="booton" id= "gob">GO!</div>');
+                $('#gob').hover(function() {
+                  $(this).css("background-color", clicked);
+                    }, function(){
+                    $(this).css("background-color", notclicked);
+                });
+                $('#gob').click(function() {
+                  socket.emit('play');
+                });
+              }
+              $setup.fadeOut();
+              $game.show();
+              socket.emit('create game',{size: size, speed: speed, len: startlen, stage: lvl});
+            });
+            $('#fast').click(function() {
+              speed = 45;
+              $('#med').css("background-color", notclicked);
+              $('#slow').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#med').click(function() {
+              speed = 63;
+              $('#fast').css("background-color", notclicked);
+              $('#slow').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#slow').click(function() {
+              speed = 90;
+              $('#fast').css("background-color", notclicked);
+              $('#med').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#small').click(function() {
+              size = 20;
+              startlen = 5;
+              $('#big').css("background-color", notclicked);
+              $('#norm').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#norm').click(function() {
+              size = 40;
+              startlen = 10;
+              $('#big').css("background-color", notclicked);
+              $('#small').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#big').click(function() {
+              size = 60;
+              startlen = 20;
+              $('#small').css("background-color", notclicked);
+              $('#norm').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+
+            $('#scware').click(function() {
+              lvl = 0;
+              $('#rect').css("background-color", notclicked);
+              $('#tief').css("background-color", notclicked);
+              $('#donut').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#rect').click(function() {
+              lvl = 1;
+              $('#scware').css("background-color", notclicked);
+              $('#tief').css("background-color", notclicked);
+              $('#donut').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#tief').click(function() {
+              lvl = 2;
+              $('#rect').css("background-color", notclicked);
+              $('#scware').css("background-color", notclicked);
+              $('#donut').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+            $('#donut').click(function() {
+              lvl = 3;
+              $('#scware').css("background-color", notclicked);
+              $('#tief').css("background-color", notclicked);
+              $('#rect').css("background-color", notclicked);
+              $(this).css("background-color", clicked);
+            });
+
+          });
+          $(document).ready(function() {
+            $(document).keydown(function(event) {
+              if((event.which == 37 || event.which == 38 || event.which == 39 || event.which == 40) && user){
+                var direction = directs[event.which - doff];
+                socket.emit('direction', {num: num, direction: direction});
+              }
+            });
+          });
+          // socket.on('set user', function(msg){
+          //   $('#messages').append($('<li>').text(msg));
+          // });
+          socket.on('players', function(players) {
+            $('#dire').html(players);
+            $('#gob').remove();
+          });
+          socket.on('params',function(gparams) {
+            speed = gparams.speed;
+            size = gparams.size;
+            startlen = gparams.startlen;
+          });
+          socket.on('picked color',function(cola) {
+            for (i = 0; i < cols.length; i++) {
+              if(num != cola.num && cola.color == cols[i]) {
+                $('#' + names[i]).css('opacity',.1);
+              }
+            }
+          });
+          socket.on('colors',function(colores) {
+            for (i = 0; i < cols.length; i++) {
+              for(j = 0; j < colores.length; j++) {
+                if(colores[j] == cols[i]) {
+                  $('#' + names[i]).css('opacity',.1);
+                }
+              }
+              // $('#' + names[i]).css('border') != 'solid black 2px' &&
+            }
+          });
+          // socket.on('direction', function(data) {
+          // });
+          socket.on('set usernum',function(data) {
+            num = data;
+          });
+          socket.on('usernum', function(data) {
+            // num = data.num;
+            // hx = data.x;
+            // hy = data.y;
+            if (num == 0) {
+              $setup.show();
+            }
+            else {
+              $game.show();
+            }
+
+          });
+          socket.on('create game',function(gamedata) {
+            $('#wait').remove();
+            var $jueg = $('#juego');
+            $jueg.prepend('<table id="arena"></table>');
+            var $tab = $('#arena');
+            for (y = 0; y < gamedata.game.length; y++) {
+              $tab.append('<tr id="r' + y + '"></tr>');
+              for (x = 0; x < gamedata.game[0].length; x++) {
+                $('#r' + y).append('<td id="y' + y + 'x' + x +'"></td>');
+                $('#y' + y + 'x' + x).css("background-color",gamedata.game[y][x]);
+                $('#y' + y + 'x' + x).css("opacity",1);
+              }
+            }
+          });
+          socket.on('users',function(homies) {
+            dudes = homies;
+            var spit = 'Please enter your name';
+            $('#peeps').empty();
+            if (user) {
+              spit = 'P: ' + (num+1) + ' Name: ' + user;
+            }
+            $('#peeps').append('<h2 id="you" style="color: ' + colah + ';">' + spit + "</h2>");
+            $('#peeps').append("<table id='playas'><tr><th>Rank</th><th>P</th><th>Name</th><th>Score</th><th>Wins</th></tr></table>");
+            spit = '';
+            if(homies.length == 0) {spit = 'NONE';}
+            for(i = 0; i < homies.length; i++) {
+              $('#playas').append('<tr><td style="color: ' + homies[i].color + '">'+ (i+1) + '</td><td style="color: ' + homies[i].color + '">' + (homies[i].num+1) + '</td><td style="color: ' + homies[i].color + '">' + homies[i].user + '</td><td style="color: ' + homies[i].color + '">' + (homies[i].len-startlen) + '</td><td style="color: ' + homies[i].color + '">' + (homies[i].wins) + '</td></tr>');
+            }
+          });
+          socket.on('game over', function() {
+            $('#arena').remove();
+            $game.empty();
+            $game.append('<h2 id="wait">Please wait while the game is loading</h2>');
+            if (num == 0) {
+              $game.fadeOut();
+              $setup.show();
+              $game.append('<div class="booton" id= "gob">GO!</div>');
+              $('#gob').hover(function() {
+                $(this).css("background-color", clicked);
+                  }, function(){
+                  $(this).css("background-color", notclicked);
+              });
+              $('#gob').click(function() {
+                socket.emit('play');
+              });
+            }
+          });
+          socket.on('move',function(arena) {
+            for(y = 0; y < arena.length; y++) {
+              for(x = 0; x < arena[0].length; x++) {
+                // if (arena[y][x] == 'white' || arena[y][x] == 'black' || arena[y][x] == 'grey' || arena[y][x] == 'brown') {
+                  $('#y' + y + 'x' + x).css("background-color",arena[y][x]);
+                // }
+                // else {
+                //   $('#y' + y + 'x' + x).css("background-color",cols[arena[y][x]]);
+                // }
+              }
+            }
+          });
+          socket.on('starter', function() {
+            $login.show();
+            $setup.fadeOut();
+            $game.fadeOut();
+          });
+        });
+      </script>
+  <body>
+    <div id="peeps">
+    </div>
+    <h1 id="snake"></h1>
+    <div class="login">
+      <!-- <div class="booton" id="phone">Phone</div> -->
+      <table class="holdcols">
+        <tr class="colcontain">
+          <td class="colorpick" id="red" style="background-color: rgb(255, 0, 0);"></td>
+          <td class="colorpick" id="orange" style="background-color: rgb(255, 165, 0);"></td>
+          <td class="colorpick" id="gold" style="background-color: rgb(255, 215, 0);"></td>
+          <td class="colorpick" id="green" style="background-color: rgb(0, 128, 0);"></td>
+          <td class="colorpick" id="blue" style="background-color: rgb(0, 0, 255);"></td>
+          <td class="colorpick" id="purple" style="background-color: rgb(128, 0, 128);"></td>
+        </tr>
+        <tr class="colcontain">
+          <td class="colorpick" id="pink" style="background-color: rgb(255, 192, 203);"></td>
+          <td class="colorpick" id="darkorange" style="background-color: rgb(255, 140, 0);"></td>
+          <td class="colorpick" id="goldenrod" style="background-color: rgb(218, 165, 32);"></td>
+          <td class="colorpick" id="yellowgreen" style="background-color: rgb(154, 205, 50);"></td>
+          <td class="colorpick" id="aqua" style="background-color: rgb(0, 255, 255);"></td>
+          <td class="colorpick" id="orchid" style="background-color: rgb(218, 112, 214);"></td>
+        </tr>
+      </table>
+      <form action="">
+        <input id="m" autocomplete="off" /><button>Play</button>
+      </form>
+    </div>
+    <div class="setup">
+      <h1 style="margin: auto;">Game Setup</h1>
+      <div id="gmenu">
+        <div class="speed">
+          <h3>Speed</h3>
+          <div class="speedb">
+            <div class="booton" id="fast">Fast</div>
+            <div class="booton" id="med">Medium</div>
+            <div class="booton" id="slow">Slow</div>
+          </div>
+          <h3>Size</h3>
+          <div class="speedb">
+            <div class="booton" id="big">Big</div>
+            <div class="booton" id="norm">Medium</div>
+            <div class="booton" id="small">Small</div>
+          </div>
+          <h3>Stage</h3>
+          <div class="speedb">
+            <div class="booton" id="scware">Square</div>
+            <!-- <div class="booton" id="rect">Rectangle</div>
+          </div>
+          <div class="speedb"> -->
+            <div class="booton" id="tief">Tie Fighter</div>
+            <div class="booton" id="donut">Donut</div>
+          </div>
+        </div>
+      </div>
+      <div class="booton" id="nextb">Next</div>
+    </div>
+    <div class="game" id="juego">
+      <!-- <h2 id="dire">GO!</h2> -->
+      <!-- <div class="booton" id="gob">GO!</div> -->
+      <!-- <script>
+        loadGame();
+      </script> -->
+      <div id="holdem"></div>
+
+    </div>
+
+    <ul id="messages"></ul>
+
+    <!-- <script src="/game.js"></script> -->
+  </body>
+</html>
